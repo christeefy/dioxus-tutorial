@@ -1,4 +1,4 @@
-use dioxus::{logger::tracing, prelude::*};
+use dioxus::prelude::*;
 
 static CSS: Asset = asset!("assets/main.css");
 
@@ -6,25 +6,48 @@ fn main() {
     dioxus::launch(App);
 }
 
+#[derive(serde::Deserialize)]
+struct DogApi {
+    message: String,
+}
+
 #[component]
 fn App() -> Element {
     rsx! {
         document::Stylesheet { href: CSS }
-        div { id: "title",
-            h1 { "HotDog! 🌭" }
-        }
-        div { id: "dogview",
-            img { src: "https://images.dog.ceo/breeds/pitbull/dog-3981540_1280.jpg" }
-        }
-        div { id: "buttons",
-            button { id: "skip", "skip" }
-            button { id: "save", "save!" }
-        }
+        Title {}
+        DogView {}
     }
 }
 
 #[component]
-fn DogApp(breed: String) -> Element {
-    tracing::info!("Rendered with breed: {breed}");
-    todo!()
+fn Title() -> Element {
+    rsx!(
+        div { id: "title",
+            h1 { "HotDog! 🌭" }
+        }
+    )
+}
+
+#[component]
+fn DogView() -> Element {
+    let mut img_src = use_resource(|| async move {
+        reqwest::get("https://dog.ceo/api/breeds/image/random")
+            .await
+            .unwrap()
+            .json::<DogApi>()
+            .await
+            .unwrap()
+            .message
+    });
+
+    rsx!(
+        div { id: "dogview",
+            img { src: img_src.cloned().unwrap_or_default() }
+        }
+        div { id: "buttons",
+            button { onclick: move |_| img_src.restart(), id: "skip", "skip" }
+            button { onclick: move |_| img_src.restart(), id: "save", "save!" }
+        }
+    )
 }
