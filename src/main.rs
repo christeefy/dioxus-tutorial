@@ -1,6 +1,21 @@
 use dioxus::prelude::*;
 
+mod backend;
+mod components;
+
+use crate::components::*;
+
 static CSS: Asset = asset!("assets/main.css");
+
+#[derive(Routable, Clone, PartialEq)]
+enum Route {
+    #[layout(NavBar)]
+    #[route("/")]
+    DogView,
+
+    #[route("/favorites")]
+    Favorites,
+}
 
 fn main() {
     dioxus::launch(App);
@@ -15,8 +30,7 @@ struct DogApi {
 fn App() -> Element {
     rsx! {
         document::Stylesheet { href: CSS }
-        Title {}
-        DogView {}
+        Router::<Route> {}
     }
 }
 
@@ -47,7 +61,15 @@ fn DogView() -> Element {
         }
         div { id: "buttons",
             button { onclick: move |_| img_src.restart(), id: "skip", "skip" }
-            button { onclick: move |_| img_src.restart(), id: "save", "save!" }
+            button {
+                onclick: move |_| async move {
+                    let current = img_src.cloned().unwrap();
+                    img_src.restart();
+                    _ = backend::save_dog(current).await;
+                },
+                id: "save",
+                "save!"
+            }
         }
     )
 }
